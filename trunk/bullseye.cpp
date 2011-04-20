@@ -1,4 +1,4 @@
-#include "cPersistPep.h"
+#include "CKronik2.h"
 #include "Spectrum.h"
 #include "MSReader.h"
 #include <iostream>
@@ -6,7 +6,7 @@
 #include <vector>
 
 MSFileFormat getFileFormat(char* c);
-void matchMS2(cPersistPep& p, char* ms2File, char* outFile, char* outFile2);
+void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2);
 void usage();
 
 double mean,stD;
@@ -18,16 +18,21 @@ bool bMatchPrecursorOnly;
 int main(int argc, char* argv[]){
 
   int i;
-  cPersistPep p1;
+  CKronik2 p1;
 
-  cout << "Bullseye, v1.26, Dec 31, 2009" << endl;
-  cout << "Copyright 2008-2009 Mike Hoopmann, Ed Hsieh, Mike MacCoss" << endl;
+  cout << "Bullseye, v1.30, Apr 20, 2011" << endl;
+  cout << "Copyright 2008-2011 Mike Hoopmann, Ed Hsieh, Mike MacCoss" << endl;
   cout << "University of Washington" << endl;
 
   //Set global variables
   ppmTolerance=10.0;
   rtTolerance=0.5;
   bMatchPrecursorOnly=false;
+
+	//Set default parameters for some options
+	double contam=2.0;
+	double maxMass=8000.0;
+	double minMass=600.0;
 
   if(argc<5){
     usage();
@@ -43,29 +48,29 @@ int main(int argc, char* argv[]){
 			}
 			switch(argv[i][1]){
       case 'c':
-        p1.setCONTAM(atof(argv[i+1]));
+        contam=atof(argv[i+1]);
 				break;
       case 'e':
         bMatchPrecursorOnly=true;
         i--;
         break;
       case 'g':
-        p1.setGAP(atoi(argv[i+1]));
+        p1.setGapTol(atoi(argv[i+1]));
         break;
       case 'm':
-        p1.setMAXMASS(atof(argv[i+1]));
+        maxMass=atof(argv[i+1]);
 				break;
       case 'n':
-        p1.setMINMASS(atof(argv[i+1]));
+        minMass=atof(argv[i+1]);
 				break;
 			case 'p':
 				ppmTolerance=atof(argv[i+1]);
 				break;
       case 'r':
-        p1.setPPM(atof(argv[i+1]));
+        p1.setPPMTol(atof(argv[i+1]));
 				break;
       case 's':
-        p1.setPERSIST(atoi(argv[i+1])+1);
+        p1.setMatchTol(atoi(argv[i+1])+1);
         break;
 			case 't':
 				rtTolerance=atof(argv[i+1]);
@@ -79,15 +84,32 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-  p1.readHK(argv[argc-4]);
-  p1.findPeps();
+	p1.processHK(argv[argc-4]);
+
+	//Remove contaminants
+	CKronik2 tKro;
+	for(i=0;i<(int)p1.size();i++){
+		if( (p1[i].lastRTime-p1[i].firstRTime) <= contam) tKro.add(p1[i]);
+	}
+	p1=tKro;
+	cout << "Persistent peptides after removing contaminants: " << p1.size() << endl;
+
+	//Filter based on size
+	tKro.clear();
+	for(i=0;i<(int)p1.size();i++){
+		if( p1[i].monoMass>=minMass && p1[i].monoMass<=maxMass) tKro.add(p1[i]);
+	}
+	p1=tKro;
+	cout << "Persistent peptides from " << minMass << " to " << maxMass << ": " << p1.size() << endl;
+
+  //p1.findPeps();
   matchMS2(p1,argv[argc-3],argv[argc-2],argv[argc-1]);
 
   return 0;
   
 }
 
-void matchMS2(cPersistPep& p, char* ms2File, char* outFile, char* outFile2){
+void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
 
   Spectrum s;
   MSReader r,rPos,rNeg;
@@ -174,8 +196,8 @@ void matchMS2(cPersistPep& p, char* ms2File, char* outFile, char* outFile2){
 
   o.setHeader(r.getHeader());
   o2.setHeader(r.getHeader());
-  o.addToHeader("FileGenerator\tBullseye v1.25\n\0");
-  o2.addToHeader("FileGenerator\tBullseye v1.25\n\0");
+  o.addToHeader("FileGenerator\tBullseye v1.30\n\0");
+  o2.addToHeader("FileGenerator\tBullseye v1.30\n\0");
 
   rPos.setPrecisionMZ(4);
   rNeg.setPrecisionMZ(4);
@@ -377,6 +399,7 @@ MSFileFormat getFileFormat(char* c){
 	if(strcmp(ext,"uzs")==0 || strcmp(ext,"UZS")==0) return uzs;
   if(strcmp(ext,"mgf")==0 || strcmp(ext,"MGF")==0) return mgf;
 	if(strcmp(ext,"mzXML")==0 || strcmp(ext,"MZXML")==0) return mzXML;
+	if(strcmp(ext,"mzML")==0 || strcmp(ext,"MZML")==0) return mzML;
   if(strcmp(ext,"raw")==0 || strcmp(ext,"RAW")==0) return raw;
 	return dunno;
 
