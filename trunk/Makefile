@@ -1,9 +1,9 @@
 #Set these variables if needed
 C = gcc
 CC = g++
-FLAGS = -O3 -static -D_NOSQLITE -D_LARGEFILE_SOURCE -D_FILEOFFSET_BITS=64 -DGCC
+FLAGS = -O3 -static -D_NOSQLITE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DGCC
 MSTOOLKIT = ../MSToolkit
-INCLUDE = -I$(MSTOOLKIT) -I$(MSTOOLKIT)/mzParser
+INCLUDE = -I$(MSTOOLKIT)/include
 PEP = CKronik2.o
 
 

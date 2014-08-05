@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <vector>
 
+using namespace MSToolkit;
+
 MSFileFormat getFileFormat(char* c);
 void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2);
 void usage();
