@@ -1,8 +1,12 @@
-#pragma once
+#ifndef _CKRONIK2_H
+#define _CKRONIK2_H
 
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 using namespace std;
 
@@ -335,3 +339,5 @@ private:
   static int compareIRev(const void *p1, const void *p2);
 
 };
+
+#endif
