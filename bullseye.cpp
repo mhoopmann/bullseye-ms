@@ -22,8 +22,8 @@ int main(int argc, char* argv[]){
   int i;
   CKronik2 p1;
 
-  cout << "Bullseye, v1.30, Apr 20, 2011" << endl;
-  cout << "Copyright 2008-2011 Mike Hoopmann, Ed Hsieh, Mike MacCoss" << endl;
+  cout << "Bullseye, v1.31, Aug 14 2015" << endl;
+  cout << "Copyright 2008-2015 Mike Hoopmann, Ed Hsieh, Mike MacCoss" << endl;
   cout << "University of Washington" << endl;
 
   //Set global variables
@@ -266,12 +266,8 @@ void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
     } else if(x==1) {
       a++;
       while(s.sizeZ()>0) s.eraseZ(0);
-      if(posFF==mgf){
-        s.addZState(p.at(index).charge,(p.at(index).monoMass+1.00727649*p.at(index).charge)/p.at(index).charge);
-      } else {
-        s.addZState(p.at(index).charge,p.at(index).monoMass+1.00727649);
-        s.addEZState(p.at(index).charge,p.at(index).monoMass+1.00727649,p.at(index).rTime,p.at(index).sumIntensity);
-      }
+      s.addZState(p.at(index).charge,p.at(index).monoMass+1.00727649);
+      s.addEZState(p.at(index).charge,p.at(index).monoMass+1.00727649,p.at(index).rTime,p.at(index).sumIntensity);
       o.add(s);
       if(o.size()>500){
         rPos.appendFile(outFile,o);
@@ -299,12 +295,8 @@ void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
       }
 
       for(i=0;i<vHit.size();i++) {
-        if(posFF==mgf){
-          s.addZState(p.at(vHit[i]).charge,(p.at(vHit[i]).monoMass+1.00727649*p.at(vHit[i]).charge)/p.at(vHit[i]).charge);
-        } else {
-          s.addZState(p.at(vHit[i]).charge,p.at(vHit[i]).monoMass+1.00727649);
-          s.addEZState(p.at(vHit[i]).charge,p.at(vHit[i]).monoMass+1.00727649,p.at(vHit[i]).rTime,p.at(vHit[i]).sumIntensity);
-        }
+        s.addZState(p.at(vHit[i]).charge,p.at(vHit[i]).monoMass+1.00727649);
+        s.addEZState(p.at(vHit[i]).charge,p.at(vHit[i]).monoMass+1.00727649,p.at(vHit[i]).rTime,p.at(vHit[i]).sumIntensity);
       }
 
       if(vHit.size()==1) {
