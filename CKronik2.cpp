@@ -125,7 +125,7 @@ bool CKronik2::loadHK(char* in){
   cout << pepCount << " peptides from " << hkData.size() << " scans." << endl;
 }
 
-bool CKronik2::processHK(char*  in, char* out) {
+bool CKronik2::processHK(char*  in, const char* out) {
 	FILE *hkr;
 	sScan scan;
 	sPep pep;
@@ -411,7 +411,7 @@ bool CKronik2::processHK(char*  in, char* out) {
   }
   cout << endl;
 
-  if(out[0]!='\0'){
+  if(out!=NULL){
     FILE* f;
     f=fopen(out,"wt");
 

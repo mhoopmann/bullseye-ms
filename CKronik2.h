@@ -287,7 +287,7 @@ public:
   //Automation
   int getPercent();
   bool loadHK(char* in);
-  bool processHK(char* in, char* out="\0");
+  bool processHK(char* in, const char* out=NULL);
 
   //Tools
   bool getRT(int scanNum, float& rt);
