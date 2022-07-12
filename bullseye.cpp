@@ -7,13 +7,40 @@
 
 using namespace MSToolkit;
 
+typedef struct sBullseyeMatch {
+  int index;
+  int scanNumber;
+} sBullseyeMatch;
+
+typedef struct sScanInfo {
+  int msLevel;
+  int scanNumber;
+  double mz;
+  float rTime;
+  //sPrecursor[] precursor;
+  //sScanInfo() {
+  //  precursor = new sPrecursor[100];
+  //}
+} sScanInfo;
+
+string averagine(double mass);
 MSFileFormat getFileFormat(char* c);
 void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2);
 void usage();
 
+bool compareMatch(sBullseyeMatch& p1, sBullseyeMatch& p2){
+  if(p1.index==p2.index) return p1.scanNumber<p2.scanNumber;
+  else return p1.index<p2.index;
+}
+
 double mean,stD;
 double ppmTolerance;
 double rtTolerance;
+string sSumFile;
+string sID;
+string sDate;
+string sHKFile;
+string sDataFile;
 bool bMatchPrecursorOnly;
 
 
@@ -22,8 +49,11 @@ int main(int argc, char* argv[]){
   int i;
   CKronik2 p1;
 
-  cout << "Bullseye, v1.31, Aug 14 2015" << endl;
-  cout << "Copyright 2008-2015 Mike Hoopmann, Ed Hsieh, Mike MacCoss" << endl;
+  sID = "Bullseye v1.32";
+  sDate = "Jul 12 2022";
+
+  cout << "Bullseye, " << sID << ", " << sDate << endl;
+  cout << "Copyright 2008-2022 Mike Hoopmann, Ed Hsieh, Mike MacCoss" << endl;
   cout << "University of Washington" << endl;
 
   //Set global variables
@@ -35,6 +65,7 @@ int main(int argc, char* argv[]){
 	double contam=2.0;
 	double maxMass=8000.0;
 	double minMass=600.0;
+  sSumFile.clear();
 
   if(argc<5){
     usage();
@@ -65,6 +96,9 @@ int main(int argc, char* argv[]){
       case 'n':
         minMass=atof(argv[i+1]);
 				break;
+      case 'o':
+        sSumFile = argv[i+1];
+        break;
 			case 'p':
 				ppmTolerance=atof(argv[i+1]);
 				break;
@@ -86,6 +120,8 @@ int main(int argc, char* argv[]){
 		}
 	}
 
+  sDataFile = argv[argc - 3];
+  sHKFile = argv[argc - 4];
 	p1.processHK(argv[argc-4]);
 
 	//Remove contaminants
@@ -111,6 +147,24 @@ int main(int argc, char* argv[]){
   
 }
 
+string averagine(double mass) {
+  string st;
+  int aa = (int)(mass / 111.2137);
+  int c = (int)(aa * 4.9558 + 0.5);
+  int h = (int)(aa * 7.8241 + 0.5);
+  int n = (int)(aa * 1.3571 + 0.5);
+  int o = (int)(aa * 1.4716 + 0.5);
+  int s = (int)(aa * 0.0390 + 0.5);
+
+  double tot = c * 12 + h * 1.007825 + n * 14.003074 + o * 15.9949141 + s * 31.97207;
+
+  h += (int)((mass - tot) / 1.007285 + 0.5);
+  st = "C" + to_string(c) + "H" + to_string(h) + "N" + to_string(n) + "O" + to_string(o);
+  if (s > 0) st += "S" + to_string(s);
+
+  return st;
+}
+
 void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
 
   Spectrum s;
@@ -128,6 +182,7 @@ void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
   int index;
   vector<int> vI;
   vector<int> vHit;
+  vector<sBullseyeMatch> vMatch;
   MSFileFormat posFF, negFF;
 
   int ch[10];
@@ -198,8 +253,9 @@ void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
 
   o.setHeader(r.getHeader());
   o2.setHeader(r.getHeader());
-  o.addToHeader("FileGenerator\tBullseye v1.30\n\0");
-  o2.addToHeader("FileGenerator\tBullseye v1.30\n\0");
+  string sh = "FileGenerator\t"+sID+"\n\0";
+  o.addToHeader(sh.c_str());
+  o2.addToHeader(sh.c_str());
 
   rPos.setPrecisionMZ(4);
   rNeg.setPrecisionMZ(4);
@@ -213,6 +269,11 @@ void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
     j=(int)(s.getMZ()+0.5);
     x=0;
     vHit.clear();
+    sScanInfo scanInfo;
+    scanInfo.scanNumber=s.getScanNumber();
+    scanInfo.rTime=s.getRTime();
+    scanInfo.msLevel=s.getMsLevel();
+    scanInfo.mz=s.getMZ();
 		
     //see if we can pick it up on base peak alone
     for(i=lookup[j-1];i<=lookup[j+1];i++){
@@ -318,6 +379,15 @@ void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
 
     for(i=0;i<vHit.size();i++) ch[p.at(vHit[i]).charge]++;
 
+    //export matched features
+    for (i = 0; i < vHit.size(); i++)
+    {
+      sBullseyeMatch bm;
+      bm.index=vHit[i];
+      bm.scanNumber=scanInfo.scanNumber;
+      vMatch.push_back(bm);
+    }
+
     //Update file position counter
     if (r.getPercent() > iPercent){
       if(iPercent<10) cout << "\b";
@@ -367,6 +437,41 @@ void matchMS2(CKronik2& p, char* ms2File, char* outFile, char* outFile2){
   for(i=1;i<10;i++) cout << "+" << i << ": " << ch[i] << endl;
 
   cout << c << " singles and " << d << " doubles total." << endl;
+
+  if (!sSumFile.empty()) {
+    sort(vMatch.begin(),vMatch.end(),compareMatch);
+
+
+    FILE* f = fopen(sSumFile.c_str(),"wt");
+    //Preamble
+    fprintf(f,"%s\n",sID.c_str());
+    fprintf(f,"Harklor input: %s\n",sHKFile.c_str());
+    fprintf(f,"MS/MS input file: %s\n",sDataFile.c_str());
+    fprintf(f,"MS/MS spectra with new precursors: %s\n",outFile);
+    fprintf(f,"Remaining spectra: %s\n",outFile2);
+    //Heading line
+    fprintf(f,"MonoisotopicMass\tz\tCharge\tStartRT\tEndRT\tApexRT\tApexAbundance\tTotalAbundance\tAveragine\tMS2Scans\n");
+    for (size_t a = 0; a < vMatch.size(); a++)
+    {
+      fprintf(f,"%.4lf\t",p[vMatch[a].index].monoMass);
+      fprintf(f,"%d\t",p[vMatch[a].index].charge);
+      fprintf(f,"[M+%dH]\t",p[vMatch[a].index].charge);
+      fprintf(f,"%.2f\t",p[vMatch[a].index].firstRTime);
+      fprintf(f,"%.2f\t",p[vMatch[a].index].lastRTime);
+      fprintf(f,"%.2f\t",p[vMatch[a].index].rTime);
+      fprintf(f,"%.1f\t",p[vMatch[a].index].intensity);
+      fprintf(f,"%.1f\t",p[vMatch[a].index].sumIntensity);
+      fprintf(f,"%s\t",averagine(p[vMatch[a].index].monoMass).c_str());
+      fprintf(f,"%d",vMatch[a].scanNumber);
+      while (a < (vMatch.size() - 1) && vMatch[a + 1].index == vMatch[a].index)
+      {
+        a++;
+        fprintf(f,";%d",vMatch[a].scanNumber);
+      }
+      fprintf(f,"\n");
+    }
+    fclose(f);
+  }
 
 }
 
@@ -428,6 +533,7 @@ void usage(){
        << "            Default value: 8000\n" << endl;
 	cout << "  -n <num>  Only consider peptides above this minimum mass in daltons.\n"
        << "            Default value: 600\n" << endl;
+  cout << "  -o <file> Output tab-delimited text summary of Peptide to MS2 matches.\n" << endl;
 	cout << "  -p <num>  Sets the tolerance (+/- ppm) for exact match searches.\n"
        << "            Default value: 10\n" << endl;
   cout << "  -r <num>  Sets the tolerance (+/- ppm) for finding persistent peptides.\n"
